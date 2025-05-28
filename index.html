@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Funcionário do Mês</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    .admin-toggle {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background-color: #333;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1000;
+    }
+    .admin-panel {
+      position: fixed;
+      top: 50px;
+      left: -300px;
+      width: 280px;
+      height: calc(100% - 50px);
+      background: white;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      transition: left 0.3s ease;
+      z-index: 999;
+      overflow-y: auto;
+    }
+    .admin-panel.open {
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-toggle" onclick="toggleAdminPanel()">Admin</div>
+
+  <div class="admin-panel" id="adminPanel">
+    <h3>Área do Administrador</h3>
+    <input type="text" id="adminNome" placeholder="Nome do administrador" />
+    <input type="password" id="adminSenha" placeholder="Senha do administrador" />
+    <button onclick="verResultados()">Entrar</button>
+    <div id="resultadosAdmin"></div>
+
+    <div id="gerenciarCandidatos" style="display:none">
+      <hr />
+      <h4>Gerenciar Candidatos</h4>
+      <input type="text" id="novoCandidato" placeholder="Novo nome" />
+      <button onclick="addCandidato()">Adicionar</button>
+      <input type="text" id="removerCandidato" placeholder="Nome a remover" />
+      <button onclick="removerCandidato()">Remover</button>
+      <hr />
+      <button onclick="encerrarVotacao()" style="background-color: #d32f2f;">Encerrar Votação</button>
+      <div id="relatorioFinal" style="margin-top: 10px; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Votação: Funcionário do Mês</h2>
+    <input type="text" id="voterId" placeholder="Digite seu nome" />
+    <div id="candidatos"></div>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    const container = document.getElementById('candidatos');
+    carregarCandidatos();
+
+    async function carregarCandidatos() {
+      const res = await fetch('http://localhost:3000/candidatos');
+      const data = await res.json();
+      container.innerHTML = '';
+      data.candidatos.forEach(nome => {
+        const btn = document.createElement('button');
+        btn.innerText = nome;
+        btn.onclick = () => votar(nome);
+        container.appendChild(btn);
+      });
+    }
+
+    async function votar(nome) {
+      const voterId = document.getElementById('voterId').value.trim();
+      if (!voterId) return alert('Digite seu ID');
+      const res = await fetch('http://localhost:3000/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voterId, candidate: nome })
+      });
+      const data = await res.json();
+      document.getElementById('resultado').innerText = data.message || data.error;
+    }
+
+    async function verResultados() {
+      const nome = document.getElementById('adminNome').value.trim();
+      const senha = document.getElementById('adminSenha').value.trim();
+      const res = await fetch('http://localhost:3000/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, senha })
+      });
+      const data = await res.json();
+      const box = document.getElementById('resultadosAdmin');
+      box.innerText = data.error || Object.entries(data.resultados).map(([nome, v]) => `${nome}: ${v} voto(s)`).join('\n');
+      if (!data.error) {
+        document.getElementById('gerenciarCandidatos').style.display = 'block';
+      }
+    }
+
+    async function addCandidato() {
+      const nome = document.getElementById('novoCandidato').value.trim();
+      const senha = document.getElementById('adminSenha').value.trim();
+      if (!nome || !senha) return alert('Preencha nome e senha');
+      const res = await fetch('http://localhost:3000/admin/add-candidato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, senha })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      carregarCandidatos();
+    }
+
+    async function removerCandidato() {
+      const nome = document.getElementById('removerCandidato').value.trim();
+      const senha = document.getElementById('adminSenha').value.trim();
+      if (!nome || !senha) return alert('Preencha nome e senha');
+      const res = await fetch('http://localhost:3000/admin/remove-candidato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, senha })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      carregarCandidatos();
+    }
+
+    async function encerrarVotacao() {
+      const nome = document.getElementById('adminNome').value.trim();
+      const senha = document.getElementById('adminSenha').value.trim();
+      const res = await fetch('http://localhost:3000/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, senha })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        document.getElementById('relatorioFinal').innerText = data.error;
+        return;
+      }
+
+      const max = Math.max(...Object.values(data.resultados));
+      const vencedores = Object.entries(data.resultados).filter(([_, votos]) => votos === max).map(([nome]) => nome);
+      const mensagem = vencedores.length === 1
+        ? `🏆 Vencedor: ${vencedores[0]} com ${max} voto(s)`
+        : `🏆 Empate entre: ${vencedores.join(', ')} com ${max} voto(s)`;
+
+      document.getElementById('relatorioFinal').innerText = mensagem;
+    }
+
+    function toggleAdminPanel() {
+      document.getElementById('adminPanel').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

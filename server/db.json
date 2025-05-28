@@ -1,0 +1,17 @@
+{
+  "votos": [
+    {
+      "voterId": "Higor",
+      "candidate": "Eliene"
+    }
+  ],
+  "eleitores": [
+    "Higor"
+  ],
+  "candidatos": [
+    "Eliene",
+    "Abraão",
+    "Diego",
+    "Hermeson"
+  ]
+}
