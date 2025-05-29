@@ -1,8 +1,10 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
+
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 const DB_PATH = './server/db.json';
 
 const ADMIN = {
@@ -13,6 +15,7 @@ const ADMIN = {
 app.use(cors());
 app.use(express.json());
 
+// Funções para ler e salvar o banco de dados
 function lerBD() {
   const raw = fs.readFileSync(DB_PATH);
   return JSON.parse(raw);
@@ -22,6 +25,25 @@ function salvarBD(dados) {
   fs.writeFileSync(DB_PATH, JSON.stringify(dados, null, 2));
 }
 
+// Função para envio de e-mail
+async function enviarEmailRelatorio(destinatario, assunto, conteudo) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'SEU_EMAIL@gmail.com',     // conta grau votação
+      pass: 'SENHA_DO_APP'             // Senha conta grau
+    }
+  });
+
+  await transporter.sendMail({
+    from: '"Sistema de Votação" <SEU_EMAIL@gmail.com>',
+    to: destinatario,
+    subject: assunto,
+    text: conteudo
+  });
+}
+
+// Rotas
 app.post('/vote', (req, res) => {
   const { voterId, candidate } = req.body;
   const db = lerBD();
@@ -92,4 +114,43 @@ app.post('/admin/remove-candidato', (req, res) => {
   res.json({ message: 'Candidato removido com sucesso.' });
 });
 
+app.post('/admin/enviar-relatorio', async (req, res) => {
+  const { nome, senha } = req.body;
+  if (nome !== ADMIN.nome || senha !== ADMIN.senha) {
+    return res.json({ error: 'Nome ou senha incorretos' });
+  }
+
+  const db = lerBD();
+  const contagem = {};
+  db.candidatos.forEach(c => contagem[c] = 0);
+  db.votos.forEach(v => {
+    if (contagem[v.candidate] !== undefined) {
+      contagem[v.candidate]++;
+    }
+  });
+
+  const max = Math.max(...Object.values(contagem));
+  const vencedores = Object.entries(contagem).filter(([_, v]) => v === max);
+
+  let texto = '🏆 Relatório Final da Votação\n\n';
+  if (vencedores.length === 1) {
+    texto += `Vencedor: ${vencedores[0][0]}\nVotos: ${vencedores[0][1]}\n\n`;
+  } else {
+    texto += `Empate entre: ${vencedores.map(([n]) => n).join(', ')}\nVotos: ${max}\n\n`;
+  }
+
+  texto += 'Demais candidatos:\n';
+  for (const [nome, votos] of Object.entries(contagem)) {
+    texto += `${nome}: ${votos} voto(s)\n`;
+  }
+
+  try {
+    await enviarEmailRelatorio('israelgrautecnico@gmail.com', 'Relatório Final da Votação', texto);
+    res.json({ message: 'Relatório enviado por e-mail com sucesso!' });
+  } catch (err) {
+    res.json({ error: 'Falha ao enviar e-mail: ' + err.message });
+  }
+});
+
+// Inicia o servidor
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
