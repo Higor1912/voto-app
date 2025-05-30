@@ -6,36 +6,6 @@
   <title>Funcionário do Mês</title>
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="icon" type="image/x-icon" href="./download.ico">
-  <style>
-    .admin-toggle {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background-color: #333;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-      z-index: 1000;
-    }
-    .admin-panel {
-      position: fixed;
-      top: 50px;
-      left: -300px;
-      width: 280px;
-      height: calc(100% - 50px);
-      background: white;
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-      padding: 20px;
-      transition: left 0.3s ease;
-      z-index: 999;
-      overflow-y: auto;
-    }
-    .admin-panel.open {
-      left: 0;
-    }
-  </style>
 </head>
 <body>
   <div class="admin-toggle" onclick="toggleAdminPanel()">Admin</div>
@@ -56,6 +26,9 @@
       <button onclick="removerCandidato()">Remover</button>
       <hr />
       <button onclick="encerrarVotacao()" style="background-color: #d32f2f;">Encerrar Votação</button>
+      <button onclick="enviarRelatorio()" style="background-color: #1976d2; color: white; margin-top: 10px;">
+        Enviar Relatório por E-mail
+      </button>
       <div id="relatorioFinal" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
   </div>
@@ -68,11 +41,12 @@
   </div>
 
   <script>
+    const API_URL = 'https://voto-app-a5a4.onrender.com';
     const container = document.getElementById('candidatos');
     carregarCandidatos();
 
     async function carregarCandidatos() {
-      const res = await fetch('http://localhost:3001/candidatos');
+      const res = await fetch(`${API_URL}/candidatos`);
       const data = await res.json();
       container.innerHTML = '';
       data.candidatos.forEach(nome => {
@@ -86,7 +60,7 @@
     async function votar(nome) {
       const voterId = document.getElementById('voterId').value.trim();
       if (!voterId) return alert('Digite seu ID');
-      const res = await fetch('http://localhost:3001/vote', {
+      const res = await fetch(`${API_URL}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voterId, candidate: nome })
@@ -98,7 +72,7 @@
     async function verResultados() {
       const nome = document.getElementById('adminNome').value.trim();
       const senha = document.getElementById('adminSenha').value.trim();
-      const res = await fetch('http://localhost:3001/results', {
+      const res = await fetch(`${API_URL}/results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, senha })
@@ -115,7 +89,7 @@
       const nome = document.getElementById('novoCandidato').value.trim();
       const senha = document.getElementById('adminSenha').value.trim();
       if (!nome || !senha) return alert('Preencha nome e senha');
-      const res = await fetch('http://localhost:3001/admin/add-candidato', {
+      const res = await fetch(`${API_URL}/admin/add-candidato`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, senha })
@@ -129,7 +103,7 @@
       const nome = document.getElementById('removerCandidato').value.trim();
       const senha = document.getElementById('adminSenha').value.trim();
       if (!nome || !senha) return alert('Preencha nome e senha');
-      const res = await fetch('http://localhost:3001/admin/remove-candidato', {
+      const res = await fetch(`${API_URL}/admin/remove-candidato`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, senha })
@@ -142,7 +116,7 @@
     async function encerrarVotacao() {
       const nome = document.getElementById('adminNome').value.trim();
       const senha = document.getElementById('adminSenha').value.trim();
-      const res = await fetch('http://localhost:3001/results', {
+      const res = await fetch(`${API_URL}/results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, senha })
@@ -161,6 +135,20 @@
         : `🏆 Empate entre: ${vencedores.join(', ')} com ${max} voto(s)`;
 
       document.getElementById('relatorioFinal').innerText = mensagem;
+    }
+
+    async function enviarRelatorio() {
+      const nome = document.getElementById('adminNome').value.trim();
+      const senha = document.getElementById('adminSenha').value.trim();
+
+      const res = await fetch(`${API_URL}/admin/enviar-relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, senha })
+      });
+
+      const data = await res.json();
+      alert(data.message || data.error);
     }
 
     function toggleAdminPanel() {
