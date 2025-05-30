@@ -137,7 +137,7 @@ app.post('/admin/encerrar-votacao', async (req, res) => {
   }
 
   try {
-    await enviarEmailRelatorio('higorgrauti@gmail.com', 'Relatório Final da Votação', texto);
+    await enviarEmailRelatorio('israelgrautecnico@gmail.com', 'Relatório Final da Votação', texto);
 
     db.votos = [];
     db.eleitores = [];
