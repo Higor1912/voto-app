@@ -29,14 +29,14 @@ async function enviarEmailRelatorio(destinatario, assunto, conteudo) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'grautecnicocabo1@gmail.com',        
-      pass: 'cdro nwtz nxkv eqfg'        
+      user: 'grautecnicocabo1@gmail.com',
+      pass: 'cdro nwtz nxkv eqfg' // senha de app
     }
   });
 
   await transporter.sendMail({
-    from: '"Sistema de Votação" <grautecnicocabo1@gmail.com>',  
-    to: destinatario,                                   
+    from: '"Sistema de Votação" <grautecnicocabo1@gmail.com>',
+    to: destinatario,
     subject: assunto,
     text: conteudo
   });
@@ -47,17 +47,9 @@ app.post('/vote', (req, res) => {
   const { voterId, candidate } = req.body;
   const db = lerBD();
 
-  if (!voterId || !candidate) {
-    return res.json({ error: 'Dados incompletos' });
-  }
-
-  if (!db.candidatos.includes(candidate)) {
-    return res.json({ error: 'Candidato inválido' });
-  }
-
-  if (db.eleitores.includes(voterId)) {
-    return res.json({ error: 'Você já votou' });
-  }
+  if (!voterId || !candidate) return res.json({ error: 'Dados incompletos' });
+  if (!db.candidatos.includes(candidate)) return res.json({ error: 'Candidato inválido' });
+  if (db.eleitores.includes(voterId)) return res.json({ error: 'Você já votou' });
 
   db.votos.push({ voterId, candidate });
   db.eleitores.push(voterId);
@@ -113,8 +105,8 @@ app.post('/admin/remove-candidato', (req, res) => {
   res.json({ message: 'Candidato removido com sucesso.' });
 });
 
-// ✉️ Rota para enviar o relatório por e-mail
-app.post('/admin/enviar-relatorio', async (req, res) => {
+// ✅ NOVA ROTA para encerrar votação + enviar relatório + resetar votos
+app.post('/admin/encerrar-votacao', async (req, res) => {
   const { nome, senha } = req.body;
   if (nome !== ADMIN.nome || senha !== ADMIN.senha) {
     return res.json({ error: 'Nome ou senha incorretos' });
@@ -146,11 +138,19 @@ app.post('/admin/enviar-relatorio', async (req, res) => {
 
   try {
     await enviarEmailRelatorio('higorgrauti@gmail.com', 'Relatório Final da Votação', texto);
-    res.json({ message: 'Relatório enviado por e-mail com sucesso!' });
+
+    db.votos = [];
+    db.eleitores = [];
+    salvarBD(db);
+
+    res.json({ message: 'Votação encerrada, relatório enviado e votos resetados!' });
   } catch (err) {
-    res.json({ error: 'Falha ao enviar e-mail: ' + err.message });
+    res.json({ error: 'Falha ao enviar e-mail ou resetar votos: ' + err.message });
   }
 });
 
-// 🚀 Inicia o servidor
+app.get('/', (req, res) => {
+  res.send('🚀 API de Votação Funcionando!');
+});
+
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
