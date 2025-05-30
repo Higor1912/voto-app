@@ -15,7 +15,6 @@ const ADMIN = {
 app.use(cors());
 app.use(express.json());
 
-// Funções para ler e salvar o banco de dados
 function lerBD() {
   const raw = fs.readFileSync(DB_PATH);
   return JSON.parse(raw);
@@ -25,25 +24,25 @@ function salvarBD(dados) {
   fs.writeFileSync(DB_PATH, JSON.stringify(dados, null, 2));
 }
 
-// Função para envio de e-mail
+// 🔐 Função para envio de e-mail com relatório
 async function enviarEmailRelatorio(destinatario, assunto, conteudo) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'SEU_EMAIL@gmail.com',     // conta grau votação
-      pass: 'SENHA_DO_APP'             // Senha conta grau
+      user: 'grautecnicocabo1@gmail.com',        
+      pass: 'cdro nwtz nxkv eqfg'        
     }
   });
 
   await transporter.sendMail({
-    from: '"Sistema de Votação" <SEU_EMAIL@gmail.com>',
-    to: destinatario,
+    from: '"Sistema de Votação" <grautecnicocabo1@gmail.com>',  
+    to: destinatario,                                   
     subject: assunto,
     text: conteudo
   });
 }
 
-// Rotas
+// 🔄 Rotas
 app.post('/vote', (req, res) => {
   const { voterId, candidate } = req.body;
   const db = lerBD();
@@ -114,6 +113,7 @@ app.post('/admin/remove-candidato', (req, res) => {
   res.json({ message: 'Candidato removido com sucesso.' });
 });
 
+// ✉️ Rota para enviar o relatório por e-mail
 app.post('/admin/enviar-relatorio', async (req, res) => {
   const { nome, senha } = req.body;
   if (nome !== ADMIN.nome || senha !== ADMIN.senha) {
@@ -145,12 +145,12 @@ app.post('/admin/enviar-relatorio', async (req, res) => {
   }
 
   try {
-    await enviarEmailRelatorio('israelgrautecnico@gmail.com', 'Relatório Final da Votação', texto);
+    await enviarEmailRelatorio('higorgrauti@gmail.com', 'Relatório Final da Votação', texto);
     res.json({ message: 'Relatório enviado por e-mail com sucesso!' });
   } catch (err) {
     res.json({ error: 'Falha ao enviar e-mail: ' + err.message });
   }
 });
 
-// Inicia o servidor
+// 🚀 Inicia o servidor
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
