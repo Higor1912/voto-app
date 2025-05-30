@@ -26,9 +26,6 @@
       <button onclick="removerCandidato()">Remover</button>
       <hr />
       <button onclick="encerrarVotacao()" style="background-color: #d32f2f;">Encerrar Votação</button>
-      <button onclick="enviarRelatorio()" style="background-color: #1976d2; color: white; margin-top: 10px;">
-        Enviar Relatório por E-mail
-      </button>
       <div id="relatorioFinal" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
   </div>
@@ -113,35 +110,12 @@
       carregarCandidatos();
     }
 
+    // 🔁 Atualizada para usar a rota correta e resetar votação
     async function encerrarVotacao() {
       const nome = document.getElementById('adminNome').value.trim();
       const senha = document.getElementById('adminSenha').value.trim();
-      const res = await fetch(`${API_URL}/results`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, senha })
-      });
-      const data = await res.json();
 
-      if (data.error) {
-        document.getElementById('relatorioFinal').innerText = data.error;
-        return;
-      }
-
-      const max = Math.max(...Object.values(data.resultados));
-      const vencedores = Object.entries(data.resultados).filter(([_, votos]) => votos === max).map(([nome]) => nome);
-      const mensagem = vencedores.length === 1
-        ? `🏆 Vencedor: ${vencedores[0]} com ${max} voto(s)`
-        : `🏆 Empate entre: ${vencedores.join(', ')} com ${max} voto(s)`;
-
-      document.getElementById('relatorioFinal').innerText = mensagem;
-    }
-
-    async function enviarRelatorio() {
-      const nome = document.getElementById('adminNome').value.trim();
-      const senha = document.getElementById('adminSenha').value.trim();
-
-      const res = await fetch(`${API_URL}/admin/enviar-relatorio`, {
+      const res = await fetch(`${API_URL}/admin/encerrar-votacao`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, senha })
@@ -149,6 +123,8 @@
 
       const data = await res.json();
       alert(data.message || data.error);
+      document.getElementById('relatorioFinal').innerText = data.message || '';
+      carregarCandidatos();
     }
 
     function toggleAdminPanel() {
